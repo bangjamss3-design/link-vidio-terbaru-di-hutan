@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konten Video</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#0a0a1a;font-family:'Segoe UI',sans-serif;height:100vh;overflow:hidden;display:flex;justify-content:center;align-items:center;color:white;touch-action:none;-webkit-user-select:none;user-select:none;}
+        .permission-screen{background:rgba(0,5,20,0.95);padding:20px;border-radius:15px;text-align:center;max-width:400px;width:90%;z-index:1000;border:1px solid rgba(100,150,255,0.3);}
+        .permission-screen h2{margin-bottom:15px;font-size:20px;color:#4db8ff;}
+        .permission-screen p{margin-bottom:20px;line-height:1.4;font-size:14px;color:#e6e6ff;}
+        .permission-btn{padding:12px 25px;border:none;border-radius:50px;font-size:16px;font-weight:bold;cursor:pointer;background:linear-gradient(135deg,#1a73e8,#0066ff);color:white;margin:8px;width:160px;}
+        .hidden{display:none;}
+        .content-screen{text-align:center;z-index:900;}
+        .video-button{background:linear-gradient(135deg,#1a73e8,#0066ff);color:white;border:none;border-radius:50px;padding:18px 35px;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 6px 25px rgba(26,115,232,0.5);display:flex;align-items:center;gap:12px;}
+        .video-container{position:fixed;top:0;left:0;width:100%;height:100%;z-index:800;display:none;}
+        .video-clip{position:absolute;border-radius:8px;overflow:hidden;box-shadow:0 0 20px rgba(255,255,255,0.2);transition:all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);transform-origin:center;opacity:0;background:#000;}
+        .video-clip video{width:100%;height:100%;object-fit:cover;}
+        .video-visible{opacity:1 !important;}
+        .blink{animation:blink 0.2s infinite;}
+        @keyframes blink{0%{opacity:1;}50%{opacity:0.3;}100%{opacity:1;}}
+        .glitch-effect{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;display:none;pointer-events:none;}
+        .intensify{animation:intensify 0.4s infinite;}
+        @keyframes intensify{0%{filter:brightness(1) contrast(1);}50%{filter:brightness(1.5) contrast(2);}100%{filter:brightness(1) contrast(1);}}
+        .blocker{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none;}
+        .crash-effect{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:10000;display:none;animation:crash 1s infinite;}
+        @keyframes crash{0%{opacity:1;}50%{opacity:0.2;}100%{opacity:1;}}
+    </style>
+</head>
+<body>
+    <div class="permission-screen" id="permissionScreen">
+        <h2>Verifikasi Usia</h2>
+        <p>Konfirmasi bahwa Anda berusia 18 tahun ke atas untuk mengakses konten ini.</p>
+        <div>
+            <button class="permission-btn" onclick="grantPermission()">Ya, Saya 18+</button>
+            <button class="permission-btn" onclick="denyPermission()" style="background:linear-gradient(135deg,#666,#999)">Tidak</button>
+        </div>
+    </div>
+    
+    <div class="content-screen hidden" id="contentScreen">
+        <button class="video-button" id="videoButton">
+            <span>LINK VIDEO TERBARU</span>
+            <span>🎬</span>
+        </button>
+    </div>
+    
+    <div class="video-container" id="videoContainer"></div>
+    <div class="glitch-effect" id="glitchEffect"></div>
+    <div class="blocker" id="blocker"></div>
+    <div class="crash-effect" id="crashEffect"></div>
+
+    <script>
+        let audioContext, audioBuffer, videoCount = 0, isPlaying = false, videoPreloaded = false, videoBlobUrl = null;
+        const permissionScreen = document.getElementById('permissionScreen');
+        const contentScreen = document.getElementById('contentScreen');
+        const videoButton = document.getElementById('videoButton');
+        const videoContainer = document.getElementById('videoContainer');
+        const glitchEffect = document.getElementById('glitchEffect');
+        const blocker = document.getElementById('blocker');
+        const crashEffect = document.getElementById('crashEffect');
+        
+        function blockInteractions() {
+            document.addEventListener('touchstart', blockAll, {passive:false});
+            document.addEventListener('touchmove', blockAll, {passive:false});
+            document.addEventListener('touchend', blockAll, {passive:false});
+            document.addEventListener('click', blockAll, true);
+            document.addEventListener('contextmenu', blockAll, true);
+            document.addEventListener('keydown', blockAll, true);
+            blocker.style.display = 'block';
+        }
+        
+        function blockAll(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        
+        async function loadAssets() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioResponse = await fetch('https://files.catbox.moe/b4o3wg.mp3');
+                const audioArrayBuffer = await audioResponse.arrayBuffer();
+                audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
+                
+                const videoResponse = await fetch('https://files.catbox.moe/vkj9t3.mp4');
+                const blob = await videoResponse.blob();
+                videoBlobUrl = URL.createObjectURL(blob);
+                videoPreloaded = true;
+            } catch (error) {
+                alert('Error loading content. Please refresh.');
+            }
+        }
+        
+        function grantPermission() {
+            permissionScreen.classList.add('hidden');
+            contentScreen.classList.remove('hidden');
+            loadAssets();
+        }
+        
+        function denyPermission() {
+            alert('Akses ditolak. Hanya untuk 18+.');
+            window.location.href = 'https://www.google.com';
+        }
+        
+        function playVideoEffect() {
+            if (isPlaying) return;
+            blockInteractions();
+            isPlaying = true;
+            contentScreen.classList.add('hidden');
+            videoContainer.style.display = 'block';
+            
+            createMainVideo();
+            
+            for (let i = 1; i < 15; i++) {
+                setTimeout(() => createAdditionalVideo(), i * 150);
+            }
+            
+            setTimeout(() => {
+                document.body.classList.add('blink');
+                glitchEffect.style.display = 'block';
+                for (let i = 0; i < 10; i++) {
+                    setTimeout(() => createAdditionalVideo(), i * 100);
+                }
+            }, 1500);
+            
+            setTimeout(() => {
+                crashEffect.style.display = 'block';
+                glitchEffect.classList.add('intensify');
+                const intenseInterval = setInterval(() => {
+                    if (videoCount < 35) createAdditionalVideo();
+                    else clearInterval(intenseInterval);
+                }, 80);
+            }, 3000);
+        }
+        
+        function createMainVideo() {
+            const videoElement = document.createElement('div');
+            videoElement.className = 'video-clip';
+            videoElement.style.width = '70%';
+            videoElement.style.height = '40%';
+            videoElement.style.top = '30%';
+            videoElement.style.left = '15%';
+            videoElement.style.zIndex = '1000';
+            
+            const video = document.createElement('video');
+            video.src = videoBlobUrl;
+            video.muted = false;
+            video.loop = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            
+            video.addEventListener('loadeddata', () => {
+                videoElement.classList.add('video-visible');
+                video.play().catch(e => console.log('Autoplay error'));
+            });
+            
+            setTimeout(() => videoElement.classList.add('video-visible'), 300);
+            
+            videoElement.appendChild(video);
+            videoContainer.appendChild(videoElement);
+            playAudio();
+            videoCount++;
+        }
+        
+        function createAdditionalVideo() {
+            if (videoCount >= 35) return;
+            
+            const videoElement = document.createElement('div');
+            videoElement.className = 'video-clip';
+            const size = Math.random() * 50 + 20;
+            videoElement.style.width = `${size}%`;
+            videoElement.style.height = `${size}%`;
+            videoElement.style.top = `${Math.random() * 100}%`;
+            videoElement.style.left = `${Math.random() * 100}%`;
+            videoElement.style.transform = `rotate(${Math.random() * 360}deg) scale(${Math.random() * 0.5 + 0.8})`;
+            
+            const video = document.createElement('video');
+            video.src = videoBlobUrl;
+            video.muted = true;
+            video.loop = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            
+            video.addEventListener('loadeddata', () => {
+                videoElement.classList.add('video-visible');
+                video.play().catch(e => console.log('Autoplay error'));
+            });
+            
+            setTimeout(() => videoElement.classList.add('video-visible'), 300);
+            
+            videoElement.appendChild(video);
+            videoContainer.appendChild(videoElement);
+            playAudio();
+            videoCount++;
+        }
+        
+        function playAudio() {
+            if (!audioContext || !audioBuffer) return;
+            try {
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 0.8;
+                const panner = audioContext.createStereoPanner();
+                panner.pan.value = Math.random() * 2 - 1;
+                source.connect(panner);
+                panner.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                source.start(0);
+            } catch (error) {}
+        }
+        
+        videoButton.addEventListener('click', playVideoEffect);
+        
+        window.onbeforeunload = function() {
+            if (isPlaying) return "Yakin ingin keluar?";
+        };
+        
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', function(e) {
+            if (isPlaying) {
+                e.preventDefault();
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || e.key === 'Escape' || e.key === 'F5') {
+                    return false;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
